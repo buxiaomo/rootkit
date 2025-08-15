@@ -60,15 +60,92 @@
 
 ## 系统要求
 
-- **内核版本**: Linux 5.15.142 (可能兼容其他5.15.x版本)
+⚠️ **重要提示：此rootkit只能在Linux系统上编译和运行，不支持macOS、Windows等其他操作系统**
+
+- **操作系统**：Linux发行版（Ubuntu、CentOS、Debian等）
+- **内核版本**：5.15.x（推荐5.15.142，其他版本可能需要适配）
 - **架构**: x86_64
 - **权限**: root权限
 - **编译环境**: 
-  - GCC 编译器
+  - GCC 9.0+ 编译器
   - Linux内核头文件
   - Make工具
 
-## 内核源码获取
+### 环境检查
+
+在编译前，请确保满足以下条件：
+
+```bash
+# 检查操作系统
+uname -s  # 应该显示 Linux
+
+# 检查内核版本
+uname -r  # 应该显示类似 5.15.x-xxx
+
+# 检查内核头文件是否安装
+ls /lib/modules/$(uname -r)/build  # 应该存在且包含内核头文件
+```
+
+## 内核头文件安装
+
+### Ubuntu/Debian系统
+
+```bash
+# 更新包管理器
+sudo apt update
+
+# 安装当前内核的头文件
+sudo apt install linux-headers-$(uname -r)
+
+# 或者安装通用内核头文件
+sudo apt install linux-headers-generic
+
+# 验证安装
+ls /lib/modules/$(uname -r)/build
+```
+
+### CentOS/RHEL/Fedora系统
+
+```bash
+# CentOS/RHEL
+sudo yum install kernel-devel kernel-headers
+# 或者使用dnf (较新版本)
+sudo dnf install kernel-devel kernel-headers
+
+# Fedora
+sudo dnf install kernel-devel kernel-headers
+
+# 验证安装
+ls /lib/modules/$(uname -r)/build
+```
+
+### Arch Linux系统
+
+```bash
+# 安装内核头文件
+sudo pacman -S linux-headers
+
+# 验证安装
+ls /lib/modules/$(uname -r)/build
+```
+
+## 内核源码获取（可选）
+
+如果需要特定内核版本的源码进行开发或调试：
+
+```bash
+# 下载Linux 5.15.142内核源码
+wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.142.tar.xz
+tar -xf linux-5.15.142.tar.xz
+cd linux-5.15.142
+
+# 配置内核（使用当前系统配置）
+cp /boot/config-$(uname -r) .config
+make oldconfig
+
+# 编译内核模块支持
+make modules_prepare
+```
 
 ```bash
 # 内核源码下载地址
@@ -79,6 +156,25 @@ git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
 ## 编译安装
+
+📋 **详细部署指南**: 请参考 [DEPLOYMENT.md](DEPLOYMENT.md) 获取在不同Linux发行版上的详细部署说明。
+
+### 快速测试（推荐）
+
+我们提供了一个自动化测试脚本，可以检查编译环境并自动编译：
+
+```bash
+# 克隆项目
+git clone <repository-url>
+cd rootkit
+
+# 运行测试脚本（会自动检查环境并编译）
+./test_compile.sh
+```
+
+### 手动编译
+
+如果你想手动编译，请按以下步骤：
 
 ### 1. 克隆或下载源码
 
@@ -110,6 +206,10 @@ sudo pacman -S linux-headers
 ### 4. 编译模块
 
 ```bash
+# 检查环境（确保在Linux系统上）
+uname -s  # 应该显示 Linux
+ls /lib/modules/$(uname -r)/build  # 确保内核头文件存在
+
 # 编译内核模块和用户态程序
 make
 

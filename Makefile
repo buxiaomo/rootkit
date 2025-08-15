@@ -1,11 +1,22 @@
 # Makefile for Advanced Linux Rootkit
 # Target Kernel: 5.15.142
 
-# 模块名称
+# 模块名称和源文件
 obj-m += rootkit.o
+rootkit-objs := rootkit.o module_hiding.o privilege_escalation.o file_hiding.o process_hiding.o port_hiding.o
 
-# 内核源码路径
-KDIR := /Users/peng.liu/workspace/src/rootkit/linux-5.15.142
+# 内核头文件路径 - 需要在Linux系统上编译
+# 在macOS上无法编译Linux内核模块
+ifeq ($(shell uname -s),Darwin)
+$(error This rootkit can only be compiled on Linux systems with kernel headers installed)
+endif
+
+KDIR := /lib/modules/$(shell uname -r)/build
+
+# 检查内核头文件是否存在
+ifeq ($(wildcard $(KDIR)),)
+$(error Kernel headers not found at $(KDIR). Please install kernel headers: apt-get install linux-headers-$(shell uname -r) or yum install kernel-devel)
+endif
 
 # 当前目录
 PWD := $(shell pwd)

