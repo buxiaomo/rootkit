@@ -3,7 +3,7 @@
 
 # 模块名称和源文件
 obj-m += rootkit.o
-rootkit-objs := rootkit.o module_hiding.o privilege_escalation.o file_hiding.o process_hiding.o port_hiding.o
+rootkit-objs := main.o module_hiding.o privilege_escalation.o file_hiding.o process_hiding.o port_hiding.o
 
 # 内核头文件路径 - 需要在Linux系统上编译
 # 在macOS上无法编译Linux内核模块

