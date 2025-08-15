@@ -210,7 +210,11 @@ void get_hiding_status(char *buffer, size_t size) {
         module_hidden ? "Yes" : "No",
         module_hidden ? "Yes" : "No",
         "Partial", // sysfs隐藏状态
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
         original_proc_modules_fops ? "Yes" : "No"
+#else
+        "Not Supported"
+#endif
     );
 }
 
