@@ -66,7 +66,24 @@ error: expected identifier or '(' before '&' token
 **解决方案**:
 移除`extern struct module *THIS_MODULE;`声明。
 
-### 4. 内核头文件未找到
+### 4. original_proc_modules_fops未声明
+
+**错误信息**:
+```
+error: 'original_proc_modules_fops' undeclared (first use in this function)
+```
+
+**解决方案**:
+该变量被条件编译保护，但使用它的函数没有相应保护。在使用该变量的地方添加条件编译:
+```c
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+    original_proc_modules_fops ? "Yes" : "No"
+#else
+    "Not Supported"
+#endif
+```
+
+### 5. 内核头文件未找到
 
 **错误信息**:
 ```
@@ -89,7 +106,7 @@ sudo dnf install kernel-devel kernel-headers
 sudo pacman -S linux-headers
 ```
 
-### 5. 编译器版本不匹配警告
+### 6. 编译器版本不匹配警告
 
 **警告信息**:
 ```
@@ -108,7 +125,7 @@ sudo apt install gcc-11  # 根据内核编译版本调整
 make EXTRA_CFLAGS="-w"
 ```
 
-### 6. 循环依赖警告
+### 7. 循环依赖警告
 
 **警告信息**:
 ```

