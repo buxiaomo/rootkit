@@ -200,7 +200,42 @@ sudo apt install gcc-11  # 根据内核编译版本调整
 make EXTRA_CFLAGS="-w"
 ```
 
-## 11. 循环依赖警告
+## 11. kallsyms_lookup_name未定义错误
+
+**错误信息**:
+```
+ERROR: modpost: "kallsyms_lookup_name" [/path/to/rootkit.ko] undefined!
+```
+
+**原因**:
+从Linux内核5.7版本开始，`kallsyms_lookup_name`函数不再导出给内核模块使用，这是出于安全考虑。
+
+**解决方案**:
+1. 使用kprobes获取kallsyms_lookup_name地址：
+```c
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+static unsigned long kln_addr = 0;
+static unsigned long (*kallsyms_lookup_name_ptr)(const char *name) = NULL;
+
+static struct kprobe kp = {
+    .symbol_name = "kallsyms_lookup_name"
+};
+
+static int init_kallsyms_lookup_name(void) {
+    int ret = register_kprobe(&kp);
+    if (ret < 0) return ret;
+    kln_addr = (unsigned long) kp.addr;
+    unregister_kprobe(&kp);
+    kallsyms_lookup_name_ptr = (kallsyms_lookup_name_t) kln_addr;
+    return 0;
+}
+#endif
+```
+
+2. 修改find_sys_call_table函数使用新的指针
+3. 在模块初始化时调用init_kallsyms_lookup_name
+
+## 12. 循环依赖警告
 
 **警告信息**:
 ```

