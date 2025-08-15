@@ -159,6 +159,8 @@ git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 
 📋 **详细部署指南**: 请参考 [DEPLOYMENT.md](DEPLOYMENT.md) 获取在不同Linux发行版上的详细部署说明。
 
+🔧 **故障排除**: 如果遇到编译或运行问题，请参考 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) 获取详细的解决方案。
+
 ### 快速测试（推荐）
 
 我们提供了一个自动化测试脚本，可以检查编译环境并自动编译：
@@ -171,6 +173,26 @@ cd rootkit
 # 运行测试脚本（会自动检查环境并编译）
 ./test_compile.sh
 ```
+
+### Linux内核5.15兼容性修复
+
+如果在Linux内核5.15上编译时遇到以下错误：
+- `redefinition of 'struct linux_dirent64'`
+- `proc_find_entry` 函数未定义
+- `THIS_MODULE` 重复声明
+
+请运行我们提供的自动修复脚本：
+
+```bash
+# 在Linux系统上运行修复脚本
+./apply_kernel_fix.sh
+```
+
+该脚本会自动：
+1. 备份原始文件
+2. 应用内核5.15兼容性补丁
+3. 尝试重新编译
+4. 如果失败则恢复备份
 
 ### 手动编译
 

